@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSK Hand-written 300 Vocab Trainer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pinyin-Pro CDN -->
+    <script src="https://unpkg.com/pinyin-pro"></script>
+    <!-- Font Inter & Noto Sans SC -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+    <style>
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 sm:p-6">
+
+    <!-- Header -->
+    <header class="w-full max-w-xl text-center my-2">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">
+            初等手写汉字 (300 คำ)
+        </h1>
+        <p class="text-slate-400 text-xs sm:text-sm mt-1">สุ่มทายพินอิน & บันทึกคำที่ตอบถูกเพื่อไม่ให้สุ่มซ้ำ</p>
+    </header>
+
+    <!-- Main Card Container -->
+    <main class="w-full max-w-xl bg-slate-800/80 backdrop-blur border border-slate-700/60 rounded-3xl p-5 sm:p-8 shadow-2xl flex flex-col items-center">
+
+        <!-- Progress Bar & Counter Status -->
+        <div class="w-full bg-slate-900/90 p-3 rounded-2xl border border-slate-700/80 mb-4 flex flex-col gap-2">
+            <div class="flex justify-between items-center text-xs font-bold">
+                <span class="text-emerald-400 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    เขียนถูกแล้ว: <span id="done-count">0</span> / <span id="total-pool-count">300</span> คำ
+                </span>
+                <button onclick="resetCompleted()" class="text-[11px] text-slate-400 hover:text-teal-300 underline font-normal transition">
+                    🔄 รีเซ็ตเริ่มสุ่มใหม่ทั้งหมด
+                </button>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700/50">
+                <div id="progress-bar" class="bg-gradient-to-r from-teal-400 to-emerald-400 h-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Mode Selector Switch -->
+        <div class="w-full bg-slate-900/90 p-1.5 rounded-2xl border border-slate-700/80 flex gap-1 mb-5">
+            <button id="mode-all" onclick="setMode('all')" class="flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 bg-teal-500 text-slate-950 shadow">
+                คำที่ยังไม่ผ่านทั้งหมด
+            </button>
+            <button id="mode-starred" onclick="setMode('starred')" class="flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5">
+                <span>⭐ เฉพาะติดดาว</span>
+                <span id="star-count-badge" class="bg-amber-400/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full border border-amber-400/30">0</span>
+            </button>
+        </div>
+
+        <!-- Flashcard Area -->
+        <div class="w-full min-h-[260px] bg-slate-900/90 border border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center relative overflow-hidden shadow-inner">
+
+            <!-- Star Toggle Button on Card -->
+            <button id="btn-star-card" onclick="toggleCurrentStar()" class="absolute top-4 right-4 p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-500 transition duration-200 focus:outline-none" title="ติดดาวคำนี้เมื่อยังจำไม่ได้">
+                <svg id="star-icon" class="w-6 h-6 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                </svg>
+            </button>
+
+            <!-- Card Number -->
+            <div id="card-num" class="absolute top-4 left-4 text-[11px] font-mono text-slate-500 bg-slate-800/50 px-2.5 py-1 rounded-lg border border-slate-700/50">
+                #---
+            </div>
+
+            <!-- Pinyin Text (Show First) -->
+            <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1 mt-2">พินอิน (Pinyin)</div>
+            <div id="display-pinyin" class="text-4xl sm:text-5xl font-extrabold text-teal-300 tracking-wide transition-all duration-300 min-h-[60px] flex items-center justify-center">
+                ---
+            </div>
+
+            <!-- Divider -->
+            <div class="w-16 h-[2px] bg-slate-800 my-3"></div>
+
+            <!-- Hanzi & Thai Meaning (Hidden by Default) -->
+            <div id="hanzi-container" class="opacity-0 scale-95 transition-all duration-300 transform flex flex-col items-center">
+                <div class="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">เฉลย (Hanzi & ความหมาย)</div>
+                <div id="display-hanzi" class="text-4xl sm:text-5xl font-extrabold text-amber-400">
+                    ?
+                </div>
+                <div id="display-thai" class="text-sm sm:text-base text-slate-300 mt-2 font-medium bg-slate-800/80 px-3 py-1 rounded-lg border border-slate-700/60 text-center">
+                    -
+                </div>
+            </div>
+
+            <!-- Empty State Warning -->
+            <div id="empty-state" class="hidden text-slate-300 text-center py-6">
+                🎉 ยินดีด้วย! คุณจำคำศัพท์ในโหมดนี้ได้ครบหมดแล้ว<br>
+                <button onclick="resetCompleted()" class="mt-3 px-4 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs rounded-xl transition">
+                    กดปุ่มนี้เพื่อดึงคำทั้งหมดกลับมาสุ่มซ้ำอีกรอบ
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Control Buttons -->
+        <div class="w-full mt-5">
+            <!-- Phase 1: Reveal Button -->
+            <div id="control-reveal" class="w-full">
+                <button onclick="revealAnswer()" class="w-full py-3.5 px-4 bg-slate-700 hover:bg-slate-600 active:scale-95 text-slate-100 font-semibold rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    กดดูเฉลยตัวจีน
+                </button>
+            </div>
+
+            <!-- Phase 2: Correct / Wrong Assessment Buttons (Show after reveal) -->
+            <div id="control-eval" class="hidden w-full grid grid-cols-2 gap-3">
+                <button onclick="markCard(false)" class="w-full py-3.5 px-4 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/50 active:scale-95 text-rose-300 font-bold rounded-xl transition duration-200 flex items-center justify-center gap-2">
+                    <span class="text-lg">❌</span> เขียนผิด (สุ่มซ้ำ)
+                </button>
+                <button onclick="markCard(true)" class="w-full py-3.5 px-4 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 font-extrabold rounded-xl transition duration-200 shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2">
+                    <span class="text-lg">✅</span> เขียนถูก (เอาออก)
+                </button>
+            </div>
+        </div>
+
+        <!-- Vocab List Drawer -->
+        <details class="w-full mt-6 text-slate-400 text-xs">
+            <summary class="cursor-pointer hover:text-slate-200 transition py-1 text-center font-medium">
+                ดูคลังคำศัพท์ทั้งหมด 300 คำ
+            </summary>
+            <div id="vocab-list" class="max-h-56 overflow-y-auto mt-2 space-y-1.5 p-2 bg-slate-900/60 rounded-xl border border-slate-700/50">
+                <!-- List items rendered via JS -->
+            </div>
+        </details>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-xs text-slate-500 my-3 text-center">
+        初等手写汉字 (300个) Flashcard Quiz
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        const rawVocabData = [
+            {id:1, hanzi:"爱", thai:"รัก"}, {id:2, hanzi:"八", thai:"แปด"}, {id:3, hanzi:"把", thai:"จับ / ด้าม / ลักษณะนามของที่มีด้ามจับ"}, {id:4, hanzi:"爸", thai:"พ่อ"}, {id:5, hanzi:"吧", thai:"...เถอะ / ...สิ (คำเสริมน้ำเสียง)"},
+            {id:6, hanzi:"白", thai:"สีขาว"}, {id:7, hanzi:"百", thai:"ร้อย"}, {id:8, hanzi:"半", thai:"ครึ่ง"}, {id:9, hanzi:"帮", thai:"ช่วย / ช่วยเหลือ"}, {id:10, hanzi:"包", thai:"กระเป๋า / ห่อ"},
+            {id:11, hanzi:"北", thai:"เหนือ"}, {id:12, hanzi:"备", thai:"เตรียม (准备)"}, {id:13, hanzi:"本", thai:"เล่ม / หนังสือ / ต้น"}, {id:14, hanzi:"比", thai:"เปรียบเทียบ / กว่า"}, {id:15, hanzi:"边", thai:"ด้าน / ข้าง"},
+            {id:16, hanzi:"别", thai:"อย่า / อื่น / อำลา"}, {id:17, hanzi:"病", thai:"ป่วย / โรค"}, {id:18, hanzi:"不", thai:"ไม่"}, {id:19, hanzi:"才", thai:"เพิ่งจะ / ความสามารถ"}, {id:20, hanzi:"菜", thai:"อาหาร / ผัก"},
+            {id:21, hanzi:"茶", thai:"ชา"}, {id:22, hanzi:"差", thai:"แย่ / ขาด / ต่างกัน"}, {id:23, hanzi:"长", thai:"ยาว / เจริญเติบโต / หัวหน้า"}, {id:24, hanzi:"常", thai:"บ่อยๆ / มักจะ"}, {id:25, hanzi:"场", thai:"สนาม / งาน / รอบ"},
+            {id:26, hanzi:"唱", thai:"ร้อง (เพลง)"}, {id:27, hanzi:"车", thai:"รถ"}, {id:28, hanzi:"吃", thai:"กิน"}, {id:29, hanzi:"出", thai:"ออก"}, {id:30, hanzi:"穿", thai:"สวมใส่ / ใส่ (เสื้อผ้า)"},
+            {id:31, hanzi:"次", thai:"ครั้ง"}, {id:32, hanzi:"从", thai:"จาก / ตั้งแต่"}, {id:33, hanzi:"错", thai:"ผิด"}, {id:34, hanzi:"答", thai:"ตอบ"}, {id:35, hanzi:"打", thai:"ตี / โทรศัพท์ / เล่น (กีฬา)"},
+            {id:36, hanzi:"大", thai:"ใหญ่"}, {id:37, hanzi:"但", thai:"แต่"}, {id:38, hanzi:"蛋", thai:"ไข่"}, {id:39, hanzi:"当", thai:"เป็น / ทำหน้าที่ / เมื่อ"}, {id:40, hanzi:"到", thai:"ถึง"},
+            {id:41, hanzi:"道", thai:"ทาง / สาย / บอก"}, {id:42, hanzi:"得", thai:"ได้ / ต้อง / ...ได้ (คำเสริมกิริยา)"}, {id:43, hanzi:"地", thai:"พื้นดิน / ...อย่าง (คำเสริมโครงสร้าง)"}, {id:44, hanzi:"的", thai:"ของ / ...ที่ (คำเสริม)"}, {id:45, hanzi:"等", thai:"รอ / ฯลฯ"},
+            {id:46, hanzi:"第", thai:"ที่... (ลำดับ)"}, {id:47, hanzi:"点", thai:"จุด / โมง / สั่ง (อาหาร)"}, {id:48, hanzi:"电", thai:"ไฟฟ้า"}, {id:49, hanzi:"店", thai:"ร้านค้า"}, {id:50, hanzi:"东", thai:"ตะวันออก"},
+            {id:51, hanzi:"动", thai:"เคลื่อนไหว / ขยับ"}, {id:52, hanzi:"都", thai:"ทั้งหมด / ล้วนแต่"}, {id:53, hanzi:"对", thai:"ถูกต้อง / กับ / คู่"}, {id:54, hanzi:"多", thai:"มาก"}, {id:55, hanzi:"饿", thai:"หิว"},
+            {id:56, hanzi:"儿", thai:"เด็ก / ลูกชาย / คำลงท้าย"}, {id:57, hanzi:"而", thai:"และ / แต่ทว่า"}, {id:58, hanzi:"二", thai:"สอง"}, {id:59, hanzi:"饭", thai:"ข้าว / อาหาร"}, {id:60, hanzi:"方", thai:"ทิศทาง / ด้าน / สี่เหลี่ยม"},
+            {id:61, hanzi:"房", thai:"ห้อง / บ้าน"}, {id:62, hanzi:"放", thai:"วาง / ปล่อย"}, {id:63, hanzi:"飞", thai:"บิน"}, {id:64, hanzi:"非", thai:"ไม่ใช่ / ไม่ใช่ว่า"}, {id:65, hanzi:"分", thai:"นาที / คะแนน / แบ่ง"},
+            {id:66, hanzi:"服", thai:"เสื้อผ้า / ยา / เชื่อฟัง"}, {id:67, hanzi:"该", thai:"ควรจะ / ถึงตา"}, {id:68, hanzi:"干", thai:"ทำ / แห้ง"}, {id:69, hanzi:"高", thai:"สูง"}, {id:70, hanzi:"告", thai:"บอก / แจ้ง (告诉)"},
+            {id:71, hanzi:"哥", thai:"พี่ชาย"}, {id:72, hanzi:"歌", thai:"เพลง"}, {id:73, hanzi:"个", thai:"อัน / คน (ลักษณนามทั่วไป)"}, {id:74, hanzi:"给", thai:"ให้ / แก่"}, {id:75, hanzi:"跟", thai:"กับ / ตาม"},
+            {id:76, hanzi:"更", thai:"ยิ่ง...ขึ้นไปอีก / กว่า"}, {id:77, hanzi:"工", thai:"งาน / คนงาน"}, {id:78, hanzi:"关", thai:"ปิด / เกี่ยวกับ"}, {id:79, hanzi:"贵", thai:"แพง / (ท่าน) ผู้มีเกียรติ"}, {id:80, hanzi:"国", thai:"ประเทศ"},
+            {id:81, hanzi:"果", thai:"ผลไม้ / ผลลัพธ์"}, {id:82, hanzi:"过", thai:"ผ่าน / เคย / ฉลอง"}, {id:83, hanzi:"还", thai:"ยัง / ยังคง / คืน"}, {id:84, hanzi:"孩", thai:"เด็ก (孩子)"}, {id:85, hanzi:"汉", thai:"ชาวจีน / ผู้ชาย (汉语)"},
+            {id:86, hanzi:"好", thai:"ดี"}, {id:87, hanzi:"号", thai:"หมายเลข / วันที่ / เบอร์"}, {id:88, hanzi:"喝", thai:"ดื่ม"}, {id:89, hanzi:"和", thai:"และ / กับ"}, {id:90, hanzi:"黑", thai:"สีดำ"},
+            {id:91, hanzi:"很", thai:"มาก"}, {id:92, hanzi:"后", thai:"หลัง / ภายหลัง"}, {id:93, hanzi:"候", thai:"เวลา / คอย (时候)"}, {id:94, hanzi:"花", thai:"ดอกไม้ / ใช้ (เงิน/เวลา)"}, {id:95, hanzi:"话", thai:"คำพูด"},
+            {id:96, hanzi:"环", thai:"รอบ / สิ่งแวดล้อม"}, {id:97, hanzi:"欢", thai:"ชอบ (喜欢)"}, {id:98, hanzi:"回", thai:"กลับ / ครั้ง"}, {id:99, hanzi:"会", thai:"สามารถ / จะ / งานประชุม"}, {id:100, hanzi:"火", thai:"ไฟ"},
+            {id:101, hanzi:"机", thai:"เครื่อง / โอกาส (机场/手机)"}, {id:102, hanzi:"鸡", thai:"ไก่"}, {id:103, hanzi:"几", thai:"กี่ / ...หน่อย"}, {id:104, hanzi:"记", thai:"จำ / จดบันทึก"}, {id:105, hanzi:"家", thai:"บ้าน / ครอบครัว"},
+            {id:106, hanzi:"假", thai:"วันหยุด /ปลอม"}, {id:107, hanzi:"间", thai:"ระหว่าง / ห้อง (房间)"}, {id:108, hanzi:"见", thai:"พบ / เจอ"}, {id:109, hanzi:"教", thai:"สอน"}, {id:110, hanzi:"叫", thai:"เรียกว่า / ชื่อว่า / ร้องเรียก"},
+            {id:111, hanzi:"觉", thai:"รู้สึก / นอนหลับ (睡觉)"}, {id:112, hanzi:"姐", thai:"พี่สาว"}, {id:113, hanzi:"介", thai:"แนะนำ (介绍)"}, {id:114, hanzi:"借", thai:"ยืม / ให้ยืม"}, {id:115, hanzi:"今", thai:"ตอนนี้ / วันนี้ (今天)"},
+            {id:116, hanzi:"进", thai:"เข้า"}, {id:117, hanzi:"净", thai:"สะอาด / หมดจด"}, {id:118, hanzi:"九", thai:"เก้า"}, {id:119, hanzi:"酒", thai:"เหล้า / แอลกอฮอล์"}, {id:120, hanzi:"就", thai:"ก็ / ก็ต่อเมื่อ / ในทันที"},
+            {id:121, hanzi:"开", thai:"เปิด / ขับ (รถ) / เริ่ม"}, {id:122, hanzi:"看", thai:"ดู / มอง / อ่าน / เยี่ยม"}, {id:123, hanzi:"考", thai:"สอบ"}, {id:124, hanzi:"可", thai:"สามารถ / ...ได้ / น่า..."}, {id:125, hanzi:"渴", thai:"กระหายน้ำ"},
+            {id:126, hanzi:"课", thai:"บทเรียน / คาบเรียน"}, {id:127, hanzi:"口", thai:"ปาก / ปากทาง / (ลักษณนามสมาชิกครอบครัว)"}, {id:128, hanzi:"块", thai:"ก้อน / ชิ้น / หยวน (เงิน)"}, {id:129, hanzi:"快", thai:"เร็ว / ดีใจ / สุขสันต์"}, {id:130, hanzi:"来", thai:"มา"},
+            {id:131, hanzi:"老", thai:"แก่ / อาวุโส / ครู (老师)"}, {id:132, hanzi:"了", thai:"แล้ว (คำเสริมกิริยาแสดงการเปลี่ยน)"}, {id:133, hanzi:"累", thai:"เหนื่อย"}, {id:134, hanzi:"冷", thai:"หนาว / เย็น"}, {id:135, hanzi:"里", thai:"ข้างใน / ใน"},
+            {id:136, hanzi:"两", thai:"สอง (ใช้กับลักษณนาม)"}, {id:137, hanzi:"零", thai:"ศูนย์"}, {id:138, hanzi:"六", thai:"หก"}, {id:139, hanzi:"楼", thai:"ตึก / ชั้น (ตึก)"}, {id:140, hanzi:"路", thai:"ถนน / เส้นทาง"},
+            {id:141, hanzi:"妈", thai:"แม่"}, {id:142, hanzi:"马", thai:"ม้า"}, {id:143, hanzi:"吗", thai:"...หรอ / ...ไหม (คำถาม)"}, {id:144, hanzi:"买", thai:"ซื้อ"}, {id:145, hanzi:"忙", thai:"ยุ่ง"},
+            {id:146, hanzi:"么", thai:"อะไร / แบบนี้ (什么/这么)"}, {id:147, hanzi:"没", thai:"ไม่มี / ไม่เคย"}, {id:148, hanzi:"每", thai:"ทุกๆ"}, {id:149, hanzi:"门", thai:"ประตู / วิชา"}, {id:150, hanzi:"们", thai:"พวก... (คำเติมพหูพจน์บุคคล)"},
+            {id:151, hanzi:"面", thai:"ด้าน / หน้า / บะหมี่ / แป้ง"}, {id:152, hanzi:"名", thai:"ชื่อ (名字)"}, {id:153, hanzi:"明", thai:"สว่าง / ชัดเจน / พรุ่งนี้ (明天)"}, {id:154, hanzi:"木", thai:"ไม้"}, {id:155, hanzi:"拿", thai:"หยิบ / ถือ / จับ"},
+            {id:156, hanzi:"哪", thai:"ไหน / อันไหน"}, {id:157, hanzi:"那", thai:"นั่น / นั้น"}, {id:158, hanzi:"奶", thai:"นม / ย่า / ยาย"}, {id:159, hanzi:"男", thai:"ผู้ชาย"}, {id:160, hanzi:"南", thai:"ใต้ (ทิศใต้)"},
+            {id:161, hanzi:"难", thai:"ยาก / ยากลำบาก"}, {id:162, hanzi:"呢", thai:"ล่ะ / ล่ะคะ (คำเสริมน้ำเสียง)"}, {id:163, hanzi:"能", thai:"สามารถ / ได้"}, {id:164, hanzi:"你", thai:"คุณ / เธอ"}, {id:165, hanzi:"年", thai:"ปี"},
+            {id:166, hanzi:"您", thai:"ท่าน (คำสรรพนามยกย่อง)"}, {id:167, hanzi:"牛", thai:"วัว"}, {id:168, hanzi:"女", thai:"ผู้หญิง"}, {id:169, hanzi:"怕", thai:"กลัว"}, {id:170, hanzi:"旁", thai:"ข้างๆ (旁边)"},
+            {id:171, hanzi:"跑", thai:"วิ่ง"}, {id:172, hanzi:"朋", thai:"เพื่อน (朋友)"}, {id:173, hanzi:"票", thai:"ตั๋ว / บัตร"}, {id:174, hanzi:"七", thai:"เจ็ด"}, {id:175, hanzi:"期", thai:"ช่วงเวลา / สัปดาห์ (星期)"},
+            {id:176, hanzi:"起", thai:"ลุกขึ้น / เริ่ม (起床)"}, {id:177, hanzi:"气", thai:"อากาศ / อารมณ์ (天气)"}, {id:178, hanzi:"汽", thai:"ไอน้ำ (汽车=รถยนต์)"}, {id:179, hanzi:"前", thai:"หน้า / ก่อน"}, {id:180, hanzi:"钱", thai:"เงิน"},
+            {id:181, hanzi:"请", thai:"เชิญ / กรุณา / เลี้ยง (อาหาร)"}, {id:182, hanzi:"球", thai:"ลูกบอล (足球/篮球)"}, {id:183, hanzi:"去", thai:"ไป"}, {id:184, hanzi:"然", thai:"ถูกต้อง / ...อย่างนั้น (然后/自然)"}, {id:185, hanzi:"让", thai:"ให้ / ยอมให้"},
+            {id:186, hanzi:"热", thai:"ร้อน"}, {id:187, hanzi:"人", thai:"คน"}, {id:188, hanzi:"认", thai:"จำได้ / รู้จัก (认识)"}, {id:189, hanzi:"日", thai:"วัน / พระอาทิตย์"}, {id:190, hanzi:"肉", thai:"เนื้อสัตว์"},
+            {id:191, hanzi:"三", thai:"สาม"}, {id:192, hanzi:"山", thai:"ภูเขา"}, {id:193, hanzi:"上", thai:"บน / ขึ้น / ด้านบน"}, {id:194, hanzi:"少", thai:"น้อย"}, {id:195, hanzi:"绍", thai:"แนะนำ (介绍)"},
+            {id:196, hanzi:"身", thai:"ร่างกาย / ตัว (身体)"}, {id:197, hanzi:"什", thai:"อะไร (什么)"}, {id:198, hanzi:"生", thai:"เกิด / ดิบ / นักเรียน (学生)"}, {id:199, hanzi:"师", thai:"ครู / อาจารย์ (老师)"}, {id:200, hanzi:"十", thai:"สิบ"},
+            {id:201, hanzi:"时", thai:"เวลา / ตอน (时候)"}, {id:202, hanzi:"识", thai:"รู้จัก / จดจำ (认识/知识)"}, {id:203, hanzi:"事", thai:"เรื่อง / ธุระ / งาน"}, {id:204, hanzi:"试", thai:"ทดสอบ / ลอง"}, {id:205, hanzi:"视", thai:"มอง / ทีวี (电视)"},
+            {id:206, hanzi:"是", thai:"ใช่ / เป็น"}, {id:207, hanzi:"手", thai:"มือ"}, {id:208, hanzi:"书", thai:"หนังสือ"}, {id:209, hanzi:"树", thai:"ต้นไม้"}, {id:210, hanzi:"谁", thai:"ใคร"},
+            {id:211, hanzi:"水", thai:"น้ำ"}, {id:212, hanzi:"睡", thai:"นอน (睡觉)"}, {id:213, hanzi:"说", thai:"พูด / บอก"}, {id:214, hanzi:"四", thai:"สี่"}, {id:215, hanzi:"送", thai:"ส่ง / มอบให้ / ไปส่ง"},
+            {id:216, hanzi:"诉", thai:"บอก / ฟ้อง (告诉)"}, {id:217, hanzi:"岁", thai:"ขวบ / ปี (อายุ)"}, {id:218, hanzi:"所", thai:"สถานที่ / ...ที่ (所以)"}, {id:219, hanzi:"他", thai:"เขา (ผู้ชาย)"}, {id:220, hanzi:"她", thai:"เธอ (ผู้หญิง)"},
+            {id:221, hanzi:"太", thai:"เกินไป / มาก / ...ที่สุด"}, {id:222, hanzi:"体", thai:"ร่างกาย / ร่าง (身体/体育)"}, {id:223, hanzi:"天", thai:"วัน / ท้องฟ้า"}, {id:224, hanzi:"听", thai:"ฟัง"}, {id:225, hanzi:"同", thai:"เหมือนกัน / ด้วยกัน (同学)"},
+            {id:226, hanzi:"外", thai:"ข้างนอก / นอก"}, {id:227, hanzi:"完", thai:"เสร็จ / หมด"}, {id:228, hanzi:"玩", thai:"เล่น"}, {id:229, hanzi:"晚", thai:"ดึก / เย็น / สาย"}, {id:230, hanzi:"网", thai:"เน็ต / เครือข่าย (上网)"},
+            {id:231, hanzi:"忘", thai:"ลืม"}, {id:232, hanzi:"为", thai:"เพื่อ / เพราะ / เป็น (因为)"}, {id:233, hanzi:"文", thai:"ภาษา / วัฒนธรรม (中文)"}, {id:234, hanzi:"问", thai:"ถาม"}, {id:235, hanzi:"我", thai:"ฉัน / ผม"},
+            {id:236, hanzi:"五", thai:"ห้า"}, {id:237, hanzi:"午", thai:"เที่ยง (上午/下午)"}, {id:238, hanzi:"西", thai:"ตะวันตก"}, {id:239, hanzi:"息", thai:"พักผ่อน (休息)"}, {id:240, hanzi:"习", thai:"ฝึกฝน / เรียน (学习)"},
+            {id:241, hanzi:"洗", thai:"ล้าง / ซัก"}, {id:242, hanzi:"喜", thai:"ชอบ / ดีใจ (喜欢)"}, {id:243, hanzi:"系", thai:"ผูก / แผนก / ระบบ (关系)"}, {id:244, hanzi:"下", thai:"ล่าง / ลง / ใต้ / ถัดไป"}, {id:245, hanzi:"先", thai:"ก่อน / แต่แรก (先生)"},
+            {id:246, hanzi:"现", thai:"ตอนนี้ / ปัจจุบัน (现在)"}, {id:247, hanzi:"想", thai:"คิดถึง / อยาก / คิดว่า"}, {id:248, hanzi:"向", thai:"ไปยัง / ทิศทาง / หันไปทาง"}, {id:249, hanzi:"小", thai:"เล็ก"}, {id:250, hanzi:"笑", thai:"หัวเราะ / ยิ้ม"},
+            {id:251, hanzi:"些", thai:"...บ้าง (ลักษณนามบอกจำนวนน้อย)"}, {id:252, hanzi:"写", thai:"เขียน"}, {id:253, hanzi:"谢", thai:"ขอบคุณ (谢谢)"}, {id:254, hanzi:"新", thai:"ใหม่"}, {id:255, hanzi:"星", thai:"ดาว / สัปดาห์ (星期)"},
+            {id:256, hanzi:"行", thai:"เดิน / ได้ / ตกลง / ธุรกิจ"}, {id:257, hanzi:"兴", thai:"ตื่นเต้น / สนุก (高兴/兴趣)"}, {id:258, hanzi:"休", thai:"พักผ่อน (休息)"}, {id:259, hanzi:"学", thai:"เรียน / ศึกษา"}, {id:260, hanzi:"样", thai:"แบบ / ลักษณะ (怎么样)"},
+            {id:261, hanzi:"要", thai:"ต้องการ / อยากจะ / จะ / สำคัญ"}, {id:262, hanzi:"也", thai:"...ก็...ด้วย / เช่นกัน"}, {id:263, hanzi:"一", thai:"หนึ่ง"}, {id:264, hanzi:"衣", thai:"เสื้อผ้า (衣服)"}, {id:265, hanzi:"医", thai:"แพทย์ / หมอ (医院/医生)"}, {id:266, hanzi:"以", thai:"ด้วย / ตั้งแต่ / เพื่อ (可以/所以)"}, {id:267, hanzi:"意", thai:"ความหมาย / ความตั้งใจ (意思)"}, {id:268, hanzi:"因", thai:"เพราะว่า (因为)"}, {id:269, hanzi:"应", thai:"ควรจะ / ตอบรับ"}, {id:270, hanzi:"用", thai:"ใช้"},
+            {id:271, hanzi:"友", thai:"เพื่อน (朋友)"}, {id:272, hanzi:"有", thai:"มี"}, {id:273, hanzi:"又", thai:"...อีก (ครั้ง) / ทั้ง...และ..."}, {id:274, hanzi:"雨", thai:"ฝน"}, {id:275, hanzi:"语", thai:"ภาษา (汉语)"},
+            {id:276, hanzi:"远", thai:"ไกล"}, {id:277, hanzi:"院", thai:"ลาน / สถาบัน / โรงพยาบาล (医院)"}, {id:278, hanzi:"月", thai:"พระจันทร์ / เดือน"}, {id:279, hanzi:"再", thai:"อีกครั้ง (再见)"}, {id:280, hanzi:"在", thai:"อยู่ / กำลัง... (แสดงความต่อเนื่อง)"},
+            {id:281, hanzi:"早", thai:"เช้า / สวัสดีตอนเช้า"}, {id:282, hanzi:"怎", thai:"อย่างไร (怎么/怎么样)"}, {id:283, hanzi:"站", thai:"ยืน / สถานี"}, {id:284, hanzi:"找", thai:"หา / ทอนเงิน"}, {id:285, hanzi:"这", thai:"นี่ / นี้"},
+            {id:286, hanzi:"着", thai:"...อยู่ (คำเสริมกิริยา)"}, {id:287, hanzi:"真", thai:"จริงๆ / แท้จริง"}, {id:288, hanzi:"正", thai:"กำลัง... / ถูกต้อง (正在)"}, {id:289, hanzi:"知", thai:"รู้ / ทราบ (知道)"}, {id:290, hanzi:"中", thai:"กลาง / ประเทศจีน (中国)"},
+            {id:291, hanzi:"助", thai:"ช่วย / ช่วยเหลือ"}, {id:292, hanzi:"住", thai:"พักอาศัย / อยู่"}, {id:293, hanzi:"准", thai:"อนุญาต / แม่นยำ (准备)"}, {id:294, hanzi:"子", thai:"เด็ก / ลูก / คำลงท้ายคำนาม"}, {id:295, hanzi:"字", thai:"ตัวอักษร"},
+            {id:296, hanzi:"走", thai:"เดิน / ออกเดินทาง"}, {id:297, hanzi:"作", thai:"ทำ / งาน (工作)"}, {id:298, hanzi:"作", thai:"ทำ / ประพันธ์ (作为)"}, {id:299, hanzi:"坐", thai:"นั่ง"}, {id:300, hanzi:"做", thai:"ทำ / ประกอบอาชีพ"}
+        ];
+
+        let vocabDatabase = [];
+        let completedIds = []; // เก็บ ID ของคำที่เขียนถูกแล้ว
+        let currentMode = 'all'; // 'all' หรือ 'starred'
+        let currentCard = null;
+
+        function initApp() {
+            const savedStars = JSON.parse(localStorage.getItem('pinyin_starred_hanzi') || '[]');
+            completedIds = JSON.parse(localStorage.getItem('pinyin_completed_ids') || '[]');
+
+            vocabDatabase = rawVocabData.map((item) => {
+                let py = '';
+                if (typeof pinyinPro !== 'undefined') {
+                    py = pinyinPro.pinyin(item.hanzi, { toneType: 'symbol' });
+                }
+                return {
+                    id: item.id,
+                    hanzi: item.hanzi,
+                    thai: item.thai,
+                    pinyin: py || '---',
+                    starred: savedStars.includes(item.hanzi)
+                };
+            });
+
+            updateProgress();
+            renderVocabList();
+            nextCard();
+        }
+
+        function saveState() {
+            const starredItems = vocabDatabase.filter(item => item.starred).map(item => item.hanzi);
+            localStorage.setItem('pinyin_starred_hanzi', JSON.stringify(starredItems));
+            localStorage.setItem('pinyin_completed_ids', JSON.stringify(completedIds));
+            updateProgress();
+            renderVocabList();
+        }
+
+        function updateProgress() {
+            const total = vocabDatabase.length;
+            const done = completedIds.length;
+            document.getElementById('done-count').innerText = done;
+            document.getElementById('total-pool-count').innerText = total;
+
+            const percentage = total > 0 ? (done / total) * 100 : 0;
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+
+            const starCount = vocabDatabase.filter(item => item.starred).length;
+            document.getElementById('star-count-badge').innerText = starCount;
+        }
+
+        // รีเซ็ตคำที่เขียนถูกกลับมาสุ่มใหม่
+        function resetCompleted() {
+            if (confirm("คุณต้องการดึงคำศัพท์ทั้งหมดที่ผ่านแล้ว กลับมาสุ่มใหม่อีกครั้งใช่ไหม?")) {
+                completedIds = [];
+                saveState();
+                nextCard();
+            }
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            const btnAll = document.getElementById('mode-all');
+            const btnStarred = document.getElementById('mode-starred');
+
+            if (mode === 'all') {
+                btnAll.className = "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 bg-teal-500 text-slate-950 shadow";
+                btnStarred.className = "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+            } else {
+                btnStarred.className = "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 bg-amber-400 text-slate-950 shadow flex items-center justify-center gap-1.5";
+                btnAll.className = "flex-1 py-2 text-xs sm:text-sm font-bold rounded-xl transition-all duration-200 text-slate-400 hover:text-slate-200";
+            }
+
+            nextCard();
+        }
+
+        function nextCard() {
+            // ดึงเฉพาะคำที่ "ยังไม่ได้เขียนถูก"
+            let activePool = vocabDatabase.filter(item => !completedIds.includes(item.id));
+
+            if (currentMode === 'starred') {
+                activePool = activePool.filter(item => item.starred);
+            }
+
+            if (activePool.length === 0) {
+                document.getElementById('display-pinyin').innerText = '';
+                document.getElementById('display-hanzi').innerText = '';
+                document.getElementById('display-thai').innerText = '';
+                document.getElementById('card-num').innerText = '#---';
+                document.getElementById('empty-state').classList.remove('hidden');
+                document.getElementById('hanzi-container').classList.add('opacity-0');
+                document.getElementById('btn-star-card').classList.add('hidden');
+                document.getElementById('control-reveal').classList.add('hidden');
+                document.getElementById('control-eval').classList.add('hidden');
+                currentCard = null;
+                return;
+            }
+
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('btn-star-card').classList.remove('hidden');
+            document.getElementById('control-reveal').classList.remove('hidden');
+            document.getElementById('control-eval').classList.add('hidden');
+
+            let randomIndex;
+            if (activePool.length > 1) {
+                do {
+                    randomIndex = Math.floor(Math.random() * activePool.length);
+                } while (currentCard && activePool[randomIndex].id === currentCard.id);
+            } else {
+                randomIndex = 0;
+            }
+
+            currentCard = activePool[randomIndex];
+
+            document.getElementById('card-num').innerText = `#${currentCard.id}`;
+            document.getElementById('display-pinyin').innerText = currentCard.pinyin;
+
+            const hanziContainer = document.getElementById('hanzi-container');
+            hanziContainer.classList.add('opacity-0', 'scale-95');
+            document.getElementById('display-hanzi').innerText = '?';
+            document.getElementById('display-thai').innerText = '-';
+
+            updateCardStarIcon();
+        }
+
+        function revealAnswer() {
+            if (!currentCard) return;
+            document.getElementById('display-hanzi').innerText = currentCard.hanzi;
+            document.getElementById('display-thai').innerText = currentCard.thai;
+
+            const hanziContainer = document.getElementById('hanzi-container');
+            hanziContainer.classList.remove('opacity-0', 'scale-95');
+
+            // สลับปุ่มเป็น ถูก/ผิด
+            document.getElementById('control-reveal').classList.add('hidden');
+            document.getElementById('control-eval').classList.remove('hidden');
+        }
+
+        // กดปุ่ม ถูก หรือ ผิด
+        function markCard(isCorrect) {
+            if (!currentCard) return;
+
+            if (isCorrect) {
+                // ถ้าเขียนถูก ตัดออกจากคลังสุ่ม
+                if (!completedIds.includes(currentCard.id)) {
+                    completedIds.push(currentCard.id);
+                }
+                saveState();
+            }
+
+            // สุ่มคำถัดไปทันที
+            nextCard();
+        }
+
+        function toggleCurrentStar() {
+            if (!currentCard) return;
+            currentCard.starred = !currentCard.starred;
+            saveState();
+            updateCardStarIcon();
+
+            if (currentMode === 'starred' && !currentCard.starred) {
+                nextCard();
+            }
+        }
+
+        function toggleStarByIndex(index) {
+            vocabDatabase[index].starred = !vocabDatabase[index].starred;
+            saveState();
+            if (currentCard && currentCard.id === vocabDatabase[index].id) {
+                updateCardStarIcon();
+            }
+        }
+
+        function updateCardStarIcon() {
+            const btn = document.getElementById('btn-star-card');
+            const icon = document.getElementById('star-icon');
+            if (!currentCard) return;
+
+            if (currentCard.starred) {
+                icon.setAttribute('fill', 'currentColor');
+                btn.className = "absolute top-4 right-4 p-2 rounded-xl bg-amber-400/10 border border-amber-400/40 text-amber-400 transition duration-200 focus:outline-none";
+            } else {
+                icon.setAttribute('fill', 'none');
+                btn.className = "absolute top-4 right-4 p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-500 transition duration-200 focus:outline-none";
+            }
+        }
+
+        function renderVocabList() {
+            const container = document.getElementById('vocab-list');
+            container.innerHTML = vocabDatabase.map((item, index) => {
+                const isDone = completedIds.includes(item.id);
+                return `
+                <div class="flex justify-between items-center bg-slate-800/80 px-3 py-2 rounded-lg border border-slate-700/50 ${isDone ? 'opacity-40' : ''}">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="text-[10px] text-slate-500 w-6 font-mono shrink-0">#${item.id}</span>
+                        <span class="text-amber-400 font-bold text-sm shrink-0">${item.hanzi}</span>
+                        <span class="text-teal-300 font-mono text-xs shrink-0">${item.pinyin}</span>
+                        <span class="text-slate-300 text-xs truncate">(${item.thai})</span>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        ${isDone ? '<span class="text-[10px] text-emerald-400 font-bold bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">ผ่านแล้ว</span>' : ''}
+                        <button onclick="toggleStarByIndex(${index})" class="p-1 ${item.starred ? 'text-amber-400' : 'text-slate-600 hover:text-slate-400'}">
+                            ★
+                        </button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
